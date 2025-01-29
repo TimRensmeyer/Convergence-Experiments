@@ -8,9 +8,10 @@ class Metric():
         self.lamb=lamb
     def forward(self,model):
         G=[]
-        for p,v in zip(model.parameters(),self.ema):
+        for i,(p,v) in enumerate(zip(model.parameters(),self.ema)):
             v=self.alpha*v+(1-self.alpha)*(p.grad**2)
             G.append(1/(v**0.5+self.lamb))
+            self.ema[i]=v
         return G
 
 class AdamSGLD():
@@ -24,8 +25,9 @@ class AdamSGLD():
 
     def step(self,model):
         G=self.G.forward(model)
-        for g,p,m in zip(G,model.parameters(),self.momentum):
+        for i,(g,p,m) in enumerate(zip(G,model.parameters(),self.momentum)):
             m=self.beta*m+(1-self.beta)*p.grad
+            self.momentum[i]=m
             new_p=p+0.5*self.stepsize*(p.grad+self.a*m*g) + torch.normal(0,torch.ones(size=p.shape)*self.stepsize**0.5)
             p.requires_grad=False
             p.copy_(new_p.detach())
